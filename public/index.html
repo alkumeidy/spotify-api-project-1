@@ -1,0 +1,197 @@
+<!doctype html>
+<html>
+  <head>
+
+    <script src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
+    <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+<script>
+      function chartStuff(array) {
+
+      var chart = new CanvasJS.Chart("chartContainer", {
+        animationEnabled: true,
+        zoomEnabled: true,
+        title:{
+          text: "Popularity"
+        },
+        axisX: {
+          title:"My rank",
+          minimum: 1,
+          maximum: array.length
+        },
+        axisY:{
+          title: "Spotify popularity meter",
+          minimum: 1,
+          maximum: 100
+        },
+        data: [{
+          type: "scatter",
+          toolTipContent: "<b>My rank: </b>{x}<br/><b>Spotify rank: </b>{y}",
+          dataPoints: [
+            { x: 1, y: array[0].popularity },
+            { x: 2, y: array[1].popularity },
+            { x: 3, y: array[2].popularity },
+            { x: 4, y: array[3].popularity },
+            { x: 5, y: array[4].popularity },
+            { x: 6, y: array[5].popularity },
+            { x: 7, y: array[6].popularity },
+            { x: 8, y: array[7].popularity },
+            { x: 9, y: array[8].popularity },
+            { x: 10, y: array[9].popularity }
+          ]
+        }]
+      });
+      chart.render();
+      console.log("chart!");
+
+      }
+      </script>
+
+    <title>Using Spotify API to display User's Top Artists</title>
+    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <style type="text/css">
+      #login, #loggedin {
+        display: none;
+      }
+      .text-overflow {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        width: 500px;
+      }
+      body {
+        background-color: rgb(0, 0, 0);
+        color: rgba(119, 119, 119, 0.725);
+      }
+     /*  dl {
+        display: grid;
+        grid-template-columns: repeat(3, 380px);
+      } */
+      .container {
+        display: grid;
+        grid-template-columns:auto auto auto auto;
+      }
+      .container::before{
+        display:none !important;
+      }
+      .media:first-child {
+    margin-top: 15px !important;
+}
+    </style>
+  </head>
+
+  <body>
+       <div class="container">
+      <div id="login">
+        <h1>Login to Spotify Account</h1>
+        <a href="/login" class="btn btn-primary">Log in with Spotify</a>
+      </div>
+      <div id="loggedin">
+        <div id="user-profile">
+        </div>
+        <div class="plots">
+          <h3>My Ranking vs Spotify Popularity</h3>
+          <div id="chartContainer" style="height: 300px; width: 100%;"></div>
+        </div>
+      </div>
+    </div>
+
+    <script id="user-profile-template" type="text/x-handlebars-template">
+      <h1>Top Artists</h1>
+      <dl class="container">
+        {{#each this}}
+        <div class="media">
+          <div class="pull-left">
+            <img class="media-object" width="90" src="{{images.0.url}}" />
+          </div>
+          <div class="media-body">
+            <dl class="dl">
+              <dt>Name</dt><dd>{{name}}</dd>
+              <dt>Genre</dt><dd>{{genres}}</dd>
+              <dt>Popularity Index</dt><dd>{{popularity}}</dd>
+              <dt>Rank # </dt><dd>{{inc @index}}</dd>
+            </dl>
+          </div>
+        </div>
+        {{/each}}
+    </dl>
+    </script>
+
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/handlebars.js/2.0.0-alpha.1/handlebars.min.js"></script>
+
+
+    <script>
+      (function() {
+
+        /**
+         * Obtains parameters from the hash of the URL
+         * @return Object
+         */
+        function getHashParams() {
+          var hashParams = {};
+          var e, r = /([^&;=]+)=?([^&;]*)/g,
+              q = window.location.hash.substring(1);
+          while ( e = r.exec(q)) {
+             hashParams[e[1]] = decodeURIComponent(e[2]);
+          }
+          return hashParams;
+        }
+
+        // var myChart = new Chart("myChart", {
+        //       type: "scatter",
+        //       data: {},
+        //       options: {}
+        //     });
+
+        var userProfileSource = document.getElementById('user-profile-template').innerHTML,
+            userProfileTemplate = Handlebars.compile(userProfileSource),
+
+            userProfilePlaceholder = document.getElementById('user-profile');
+            // rankChartSource = document.getElementById('chartContainer'),
+            // rankChartTemplate = Handlebars.compile(rankChartSource);
+
+        var params = getHashParams();
+
+        var access_token = params.access_token,
+            refresh_token = params.refresh_token,
+            error = params.error;
+
+        if (error) {
+          alert('There was an error during the authentication');
+        } else {
+          if (access_token) {
+
+          $.ajax({
+                url: 'https://api.spotify.com/v1/me/top/artists',
+                headers: {
+                  'Authorization': 'Bearer ' + access_token
+                },
+                success: function(response) {
+                  var array = response.items;
+                  //userProfilePlaceholder.innerHTML = userProfileTemplate(array, popularityIndex);
+                  array.unshift(({popularity: 11}));
+                  var popularityIndex = array.map((artist, index) => ({index, popularity: artist.popularity}));
+                  popularityIndex.shift();
+                  array.shift();
+                  userProfilePlaceholder.innerHTML = userProfileTemplate(array, popularityIndex);
+                  //rankChartTemplate.innerHTML = userProfileTemplate(array);
+
+                  $('#login').hide();
+                  $('#loggedin').show();
+                 chartStuff(array);
+                }
+            });
+          } else {
+              // render initial screen
+              $('#login').show();
+              $('#loggedin').hide();
+          }
+        }
+      })();
+    </script>
+    <script>Handlebars.registerHelper("inc", function(value, options)
+      {
+          return parseInt(value) + 1;
+      });</script>
+  </body>
+</html>
